@@ -6,36 +6,36 @@ from ..model_util import UNKNOWN_VALUE, MISSING_VALUE, UnknownDict, save_dict, l
 
 FEATURE_TEMPLATES = (
     "s0s1xd" "s1s0x" "s0b0xd" "b0s0x"  # specific edges
-    "s0wmtudefFncpT#^$xhqyPCIEMN"
-    "s1wmtudefFncT#^$xhyN"
-    "s2wmtudefFncT#^$xhy"
-    "s3wmtudefFncT#^$xhyN"
-    "b0wmtudFncT#^$hPCIEMN"
-    "b1wmtudFncT#^$"
-    "b2wmtudFncT#^$"
-    "b3wmtudFncT#^$"
-    "s0lwmefFnc#^$"
-    "s0rwmefFnc#^$"
-    "s1lwmefFnc#^$"
-    "s1rwmefFnc#^$"
-    "s0llwmefFn#^$"
-    "s0lrwmefFn#^$"
-    "s0rlwmefFn#^$"
-    "s0rrwmefFn#^$"
-    "s1llwmefFn#^$"
-    "s1lrwmefFn#^$"
-    "s1rlwmefFn#^$"
-    "s1rrwmefFn#^$"
-    "s0LwmefFn#^$"
-    "s0RwmefFn#^$"
-    "s1LwmefFn#^$"
-    "s1RwmefFn#^$"
-    "b0LwmefFn#^$"
-    "b0RwmefFn#^$"
-    "s0b0efF" "b0s0efF"  # specific edges
-    "a0efAa1efFA",  # past actions
+    "s0wmtudencpT#^$xhqyPCIEMN"
+    "s1wmtudencT#^$xhyN"
+    "s2wmtudencT#^$xhy"
+    "s3wmtudencT#^$xhyN"
+    "b0wmtudncT#^$hPCIEMN"
+    "b1wmtudncT#^$"
+    "b2wmtudncT#^$"
+    "b3wmtudncT#^$"
+    "s0lwmenc#^$"
+    "s0rwmenc#^$"
+    "s1lwmenc#^$"
+    "s1rwmenc#^$"
+    "s0llwmen#^$"
+    "s0lrwmen#^$"
+    "s0rlwmen#^$"
+    "s0rrwmen#^$"
+    "s1llwmen#^$"
+    "s1lrwmen#^$"
+    "s1rlwmen#^$"
+    "s1rrwmen#^$"
+    "s0Lwmen#^$"
+    "s0Rwmen#^$"
+    "s1Lwmen#^$"
+    "s1Rwmen#^$"
+    "b0Lwmen#^$"
+    "b0Rwmen#^$"
+    "s0b0e" "b0s0e"  # specific edges
+    "a0efAa1eA",  # past actions
 )
-INDEXED = "wmtudFT"  # words, lemmas, fine POS tags, coarse/universal POS tags, dep rels, entity type
+INDEXED = "wmtudT"  # words, lemmas, fine POS tags, coarse/universal POS tags, dep rels, entity type
 DEFAULT = ()  # intermediate value for missing features
 FILENAME_SUFFIX = ".enum"
 
