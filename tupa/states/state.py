@@ -258,7 +258,7 @@ class State:
             if child is None:
                 child = action.node = self.add_node(orig_node=action.orig_node, implicit=True)
             action.edge = self.add_edge(Edge(parent, child, tag, action.orig_edge, remote=action.remote))
-            if self.args.refinement_labels and tag in self.passage.refined_categories:
+            if self.args.refinement_labels and tag in Config().refinement(self.args.refinement_mapping):
                     self.need_label[tag] = action.edge
             if action.node:
                 self.buffer.appendleft(action.node)
@@ -324,7 +324,7 @@ class State:
         self.heads.discard(edge.child)
         self.log.append("edge: %s" % edge)
 
-        self.integrate_refinement()
+        # self.integrate_refinement()
 
         return edge
 
@@ -336,7 +336,7 @@ class State:
         for (_, t_self), (_, t_copy) in zip(terminals, terminals_copy):
             if 'ss' in t_self.extra and t_self.extra['ss'][0] == 'p':
                 ss = t_self.extra['ss']
-                refined = []
+                # refined = []
                 for _r in find_refined(t_copy, dict(terminals_copy), local=True)[0]:
                     copy_child = None
                     copy_parent = None
@@ -353,13 +353,13 @@ class State:
                     else:
                         if not any(c.tag == ss for c in r.categories):
                             r.add_category(core.Category(ss, parent=r.tag))
-                        refined.append(r)
-                for prev in t_self.extra.get('refined', []):
-                    if prev not in refined:
-                        for cat in prev.categories:
-                            if cat.tag == ss:
-                                prev.remove_category(cat)
-                t_self.extra['refined'] = refined
+                        # refined.append(r.ID)
+                # for prev in t_self.extra.get('refined', []):
+                #     if prev not in refined:
+                #         for cat in prev.categories:
+                #             if cat.tag == ss:
+                #                 prev.remove_category(cat)
+                # t_self.extra['refined'] = refined
 
     PARENT_CHILD = (
         ((Actions.LeftEdge, Actions.LeftRemote), (-1, -2)),
@@ -384,8 +384,11 @@ class State:
             return None
 
     def label_axis(self, axis, label):
-        self.need_label[axis].label = label
-        self.need_label[axis].labeled = True
+        if isinstance(self.need_label[axis], core.Edge):
+            self.need_label[axis].refinement = label
+        else:
+            self.need_label[axis].label = label
+            self.need_label[axis].labeled = True
         self.log.append("label: %s" % self.need_label[axis])
         self.type_validity_cache = {}
         self.need_label[axis] = None

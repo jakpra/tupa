@@ -249,6 +249,8 @@ class Model:
     def score(self, state, axis):
         features = self.feature_extractor.extract_features(state)
         return self.classifier.score(features, is_refinement=axis in self.refined_categories, axis=axis), features  # scores is a NumPy array
+        # return self.classifier.score(features, is_refinement=axis != 'ucca',
+        #                              axis=axis), features  # scores is a NumPy array
 
     def init_features(self, state, train):
         self.init_model()

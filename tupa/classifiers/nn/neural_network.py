@@ -33,9 +33,9 @@ class AxisModel:
     """
     def __init__(self, axis, num_labels, config, model, birnn_type):
         args = config.hyperparams.specific[axis]
-        self.birnn = birnn_type(config, args, model, save_path=("labels", axis, "birnn"),
+        self.birnn = birnn_type(config, args, model, save_path=("axes", axis, "birnn"),
                                 copy_shared=args.copy_shared == [] or axis in (args.copy_shared or ()))
-        self.mlp = MultilayerPerceptron(config, args, model, num_labels=num_labels, save_path=("labels", axis, "mlp"))
+        self.mlp = MultilayerPerceptron(config, args, model, num_labels=num_labels, save_path=("axes", axis, "mlp"))
 
 
 class NeuralNetwork(Classifier, SubModel):
@@ -112,7 +112,7 @@ class NeuralNetwork(Classifier, SubModel):
                 return
         else:
             if axis not in self.labels: #refinement axis
-                self.axes[axis] = AxisModel(axis, self.labels[REFINEMENT_LABEL_KEY].size, self.config, self.model, self.birnn_type)
+                self.axes[REFINEMENT_LABEL_KEY] = AxisModel(REFINEMENT_LABEL_KEY, self.labels[REFINEMENT_LABEL_KEY].size, self.config, self.model, self.birnn_type)
                 self.config.print("Initializing %s model with %d labels" % (axis, self.labels[REFINEMENT_LABEL_KEY].size), level=4)
             else:
                 self.axes[axis] = AxisModel(axis, self.labels[axis].size, self.config, self.model, self.birnn_type)
@@ -191,7 +191,7 @@ class NeuralNetwork(Classifier, SubModel):
 
     def get_birnns(self, *axes):
         """ Return shared + axis-specific BiRNNs """
-        return [m.birnn for m in [self] + [self.axes[axis] for axis in axes]]
+        return [m.birnn for m in [self] + [self.axes[axis if axis in self.labels else REFINEMENT_LABEL_KEY] for axis in axes]]
 
     def evaluate(self, features, axis, train=False):
         """
@@ -204,7 +204,7 @@ class NeuralNetwork(Classifier, SubModel):
         self.init_model(axis, train)
         value = self.value.get(axis)
         if value is None:
-            self.value[axis] = value = self.axes[axis].mlp.evaluate(self.generate_inputs(features, axis), train=train)
+            self.value[axis] = value = self.axes[axis if axis in self.labels else REFINEMENT_LABEL_KEY].mlp.evaluate(self.generate_inputs(features, axis), train=train)
         return value
 
     def score(self, features, is_refinement, axis):

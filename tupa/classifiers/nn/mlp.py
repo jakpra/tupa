@@ -155,6 +155,9 @@ class MultilayerPerceptron(SubModel):
     
     def verify_dim(self, attr, val):
         expected = getattr(self, attr)
+        if expected is None:
+            for x in [attr, val]:
+                self.config.print(x, level=0)
         assert val == expected, "%s %s: %d, expected: %d" % ("/".join(self.save_path), attr, val, expected)
 
     def invalidate_caches(self):
