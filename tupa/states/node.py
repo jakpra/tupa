@@ -124,12 +124,12 @@ class Node:
         if self.text:  # For Word terminals (Punctuation already created by add_punct for parent)
             if parent.node is not None:
                 if self.node is None:
-                    self.node = parent.node.add([(EdgeTags.Terminal, "", "", "")], self.get_terminal(l0)).child
+                    self.node = parent.node.add([(EdgeTags.Terminal, "", "", "")] + [(e.refinement, "", "", e.tag) for e in self.incoming], self.get_terminal(l0)).child
                 elif self.node not in parent.node.children:
-                    parent.node.add([(EdgeTags.Terminal, "", "", "")], self.node)
+                    parent.node.add([(EdgeTags.Terminal, "", "", "")] + [(e.refinement, "", "", e.tag) for e in self.incoming], self.node)
         elif edge and edge.child.text and layer0.is_punct(edge.child.get_terminal(l0)): # For Punctuation, that already created by add_punct for parent
             if Config().args.verify:
-                assert edge_categories[0][0] == EdgeTags.Punctuation, "Punctuation parent %s's edge tag is %s" % (parent.node_id, tag)
+                assert edge_categories[0][0] == EdgeTags.Punctuation, "Punctuation parent %s's edge tag is %s" % (parent.node_id, edge_categories[0][0])
                 assert edge.tag == EdgeTags.Terminal, "Punctuation %s's edge tag is %s" % (self.node_id, edge.tag)
             if self.node is None:
                 self.node = l1.add_punct(parent.node, edge.child.get_terminal(l0))

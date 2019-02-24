@@ -5,10 +5,11 @@ from ucca.textutil import Attr
 
 from tupa.config import Config, FEATURE_PROPERTIES
 
-FEATURE_ELEMENT_PATTERN = re.compile(r"([sba])(\d)([lrLR]*)([%s]*)" % FEATURE_PROPERTIES)
+FEATURE_ELEMENT_PATTERN = re.compile(r"([sbgoza])(\d)([lrLR]*)([%s]*)" % FEATURE_PROPERTIES)
 FEATURE_TEMPLATE_PATTERN = re.compile(r"^(%s)+$" % FEATURE_ELEMENT_PATTERN.pattern)
 NON_NUMERIC = "wmtudencpAT#^$"
 
+REFINEMENT_LABEL_KEY = "r"
 
 class FeatureTemplate:
     """
@@ -119,15 +120,37 @@ class FeatureTemplateElement:
                 self.node = state.buffer[self.index]
             else:  # source == "a"
                 self.node = state.actions[-1 - self.index]
-            for relative in self.relatives:
-                nodes = self.node.parents if relative.isupper() else self.node.children
-                if relative.lower() == "r":
-                    if len(nodes) == 1:
-                        raise ValueError("Avoiding identical right and left relatives")
-                    self.node = nodes[-1]
-                else:  # relative.lower() == "l"
-                    self.node = nodes[0]
-        except (IndexError, TypeError, AttributeError, IndexError, ValueError):
+                if self.source in ("o", "g", "z"):
+                    # Config().print(state.need_label, level=0)
+                    if state.need_label.get(REFINEMENT_LABEL_KEY):
+                        l0 = state.passage.layer(layer0.LAYER_ID)
+                        terminal = self.node.edge.child.get_terminal(l0)
+                        # Config().print(terminal.extra, level=0)
+                        if self.source == "z":
+                            if terminal.extra.get('ss', '').startswith('p.'):
+                                self.node = self.node.node
+                            else:
+                                self.node = None
+                        else:
+                            key = "local_gov" if self.source == "g" else "local_obj"
+                            index = int(terminal.extra.get(key, 0))
+                            self.node = state.terminals[index - 1] if index > 0 else None
+                    else:
+                        self.node = None
+
+            if self.node is not None:
+                for relative in self.relatives:
+                    nodes = self.node.parents if relative.isupper() else self.node.children
+                    if relative.lower() == "r":
+                        if len(nodes) == 1:
+                            raise ValueError("Avoiding identical right and left relatives")
+                        self.node = nodes[-1]
+                    else:  # relative.lower() == "l"
+                        self.node = nodes[0]
+        except (IndexError, TypeError, AttributeError, IndexError, ValueError) as e:
+            # if state.need_label.get(REFINEMENT_LABEL_KEY) and self.source in ("o", "g", "p"):
+            #     Config().print(str(e), level=0)
+            #     assert False, (self.source, str(state))
             if Config().args.missing_node_features or node_dropout and node_dropout > Config().random.random_sample():
                 self.node = None
 
@@ -140,6 +163,8 @@ class FeatureTemplateElement:
                 elif prop in indexed[1:]:
                     continue
             value = self.get_prop(state, prop, getter, default)
+            # if self.source in "goz" and self.node is not None:
+            #     Config().print(lambda: '%s (%s) %s: %s' % (self.source, self.node, prop, value), level=0)
             yield (self, prop, value) if as_tuples else value
 
     def get_prop(self, state, prop, getter, default):
@@ -164,12 +189,15 @@ class FeatureExtractor:
             "Features do not match pattern: " + ", ".join(
                 f for f in feature_templates if not FEATURE_TEMPLATE_PATTERN.match(f))
         # convert the list of features textual descriptions to the actual fields
+        self.set_feature_templates(feature_templates, omit_features=omit_features)
+        self.params = {} if params is None else params
+        self.omit_features = omit_features
+
+    def set_feature_templates(self, feature_templates, omit_features=None):
         self.feature_templates = [
             FeatureTemplate(feature_name, tuple(FeatureTemplateElement(*m.group(1, 2, 3, 4), omit_features)
                                                 for m in re.finditer(FEATURE_ELEMENT_PATTERN, feature_name)))
             for feature_name in feature_templates]
-        self.params = {} if params is None else params
-        self.omit_features = omit_features
 
     def extract_features(self, state):
         """
@@ -226,6 +254,8 @@ EDGE_PRIORITY = {tag: i for i, tag in enumerate((
 
 
 def head_terminal(node, *_):
+    if isinstance(node, layer0.Terminal):
+        return node
     return head_terminal_height(node)
 
 

@@ -57,6 +57,7 @@ class NeuralNetwork(Classifier, SubModel):
         self.weight_decay = self.config.args.dynet_weight_decay
         self.empty_values = OrderedDict()  # string (feature param key) -> expression
         self.axes = OrderedDict()  # string (axis) -> AxisModel
+        self.axis_keys = []
         self.losses = []
         self.steps = 0
         self.trainer_type = self.trainer = self.value = self.birnn = None
@@ -112,7 +113,7 @@ class NeuralNetwork(Classifier, SubModel):
                 return
         else:
             if axis not in self.labels: #refinement axis
-                self.axes[REFINEMENT_LABEL_KEY] = AxisModel(REFINEMENT_LABEL_KEY, self.labels[REFINEMENT_LABEL_KEY].size, self.config, self.model, self.birnn_type)
+                self.axes[axis] = AxisModel(axis, self.labels[REFINEMENT_LABEL_KEY].size, self.config, self.model, self.birnn_type)
                 self.config.print("Initializing %s model with %d labels" % (axis, self.labels[REFINEMENT_LABEL_KEY].size), level=4)
             else:
                 self.axes[axis] = AxisModel(axis, self.labels[axis].size, self.config, self.model, self.birnn_type)
@@ -173,12 +174,15 @@ class NeuralNetwork(Classifier, SubModel):
 
     def generate_inputs(self, features, axis):
         indices = []  # list, not set, in order to maintain consistent order
+        num_indices = []
         for key, values in sorted(features.items()):
             param = self.input_params[key]
             lookup = self.params.get(key)
             if param.numeric:
                 yield key, dy.inputVector(values)
             elif param.indexed:  # collect indices to be looked up
+                # self.config.print(lambda: "INDEXED: %s" % (key,), level=0)
+                num_indices.append(len(values))
                 indices += values  # DenseFeatureExtractor collapsed features so there are no repetitions between them
             elif lookup is None:  # ignored
                 continue
@@ -191,7 +195,7 @@ class NeuralNetwork(Classifier, SubModel):
 
     def get_birnns(self, *axes):
         """ Return shared + axis-specific BiRNNs """
-        return [m.birnn for m in [self] + [self.axes[axis if axis in self.labels else REFINEMENT_LABEL_KEY] for axis in axes]]
+        return [m.birnn for m in [self] + [self.axes[axis] for axis in axes]]
 
     def evaluate(self, features, axis, train=False):
         """
@@ -204,7 +208,9 @@ class NeuralNetwork(Classifier, SubModel):
         self.init_model(axis, train)
         value = self.value.get(axis)
         if value is None:
-            self.value[axis] = value = self.axes[axis if axis in self.labels else REFINEMENT_LABEL_KEY].mlp.evaluate(self.generate_inputs(features, axis), train=train)
+            # if axis == REFINEMENT_LABEL_KEY:
+            # self.config.print([axis, features], level=0)
+            self.value[axis] = value = self.axes[axis].mlp.evaluate(self.generate_inputs(features, axis), train=train)
         return value
 
     def score(self, features, is_refinement, axis):
@@ -294,7 +300,7 @@ class NeuralNetwork(Classifier, SubModel):
             
     def sub_models(self):
         """ :return: ordered list of SubModels """
-        axes = list(filter(None, map(self.axes.get, self.labels or self.labels_t)))
+        axes = list(filter(None, map(self.axes.get, self.axes.keys()))) # self.labels or self.labels_t)))
         return [self] + [m.mlp for m in axes] + [m.birnn for m in axes + [self]]
     
     def save_sub_model(self, d, *args):

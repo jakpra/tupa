@@ -62,7 +62,7 @@ def add_param_arguments(ap=None, arg_default=None):  # arguments with possible f
         ap = ArgParser()
 
     group = ap.add_argument_group(title="Refinement layer")
-    add(group, "--max-refinement-labels", type=int, default=0, help="max number of refinement labels to allow")
+    add(group, "--max-refinement-labels", type=int, default=50, help="max number of refinement labels to allow")
     add(group, "--max-refinement-categories", type=int, default=0, help="max refinement categories to allow")
     add(group, "--min-refinement-label-count", type=int, default=2, help="min number of occurrences for a refinement label")
     add_boolean(group, "use-gold-action-labels", "gold action labels when parsing", default=False)
@@ -118,6 +118,7 @@ def add_param_arguments(ap=None, arg_default=None):  # arguments with possible f
     add(group, "--pos-dim", type=int, default=20, help="dimension for coarse/universal POS tag embeddings")
     add(group, "--dep-dim", type=int, default=10, help="dimension for dependency relation embeddings")
     add(group, "--edge-label-dim", type=int, default=20, help="dimension for edge label embeddings")
+    add(group, "--refinement-label-dim", type=int, default=20, help="dimension for refinement label embeddings")
     add(group, "--node-label-dim", type=int, default=0, help="dimension for node label embeddings")
     add(group, "--node-category-dim", type=int, default=0, help="dimension for node category embeddings")
     add(group, "--punct-dim", type=int, default=1, help="dimension for separator punctuation embeddings")
@@ -407,7 +408,7 @@ class Config(object, metaclass=Singleton):
             if k not in amr_hyperparams and not getattr(amr_hyperparams, k, None):
                 setattr(amr_hyperparams, k, v)
         refinement_hyperparams = self.hyperparams.specific["ucca"]
-        for k, v in dict(refinement_label_dim=20, max_refinement_labels=1000, refinement_category_dim=5,
+        for k, v in dict(refinement_label_dim=20, max_refinement_labels=50, refinement_category_dim=5,
                          max_refinement_categories=25, refinement_label_dropout=0.4).items():
             if k not in refinement_hyperparams and not getattr(refinement_hyperparams, k, None):
                 setattr(refinement_hyperparams, k, v)

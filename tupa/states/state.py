@@ -228,7 +228,8 @@ class State:
         """
         try:
             self.check_valid_label(axis, label)
-        except InvalidActionError:
+        except InvalidActionError as e:
+            Config().print(e, level=0)
             return False
         return True
 
@@ -258,8 +259,10 @@ class State:
             if child is None:
                 child = action.node = self.add_node(orig_node=action.orig_node, implicit=True)
             action.edge = self.add_edge(Edge(parent, child, tag, action.orig_edge, remote=action.remote))
-            if self.args.refinement_labels and tag in Config().refinement(self.args.refinement_mapping):
-                    self.need_label[tag] = action.edge
+            if self.args.refinement_labels and tag in self.passage.refined_categories \
+                    and (not child.text or child.get_terminal(self.passage.layer(layer0.LAYER_ID)).extra.get('ss', '').startswith('p.')
+                    and not action.edge.refinement): # pre-identified terminals only
+                self.need_label[REFINEMENT_LABEL_KEY] = action.edge
             if action.node:
                 self.buffer.appendleft(action.node)
         elif action.is_type(Actions.Shift):  # Push buffer head to stack; shift buffer
@@ -384,8 +387,14 @@ class State:
             return None
 
     def label_axis(self, axis, label):
-        if isinstance(self.need_label[axis], core.Edge):
-            self.need_label[axis].refinement = label
+        if axis == REFINEMENT_LABEL_KEY:
+            if label is not None:
+                # Config().print([self.need_label[axis].child.terminals[0].text, [c.tag for c in self.need_label[axis].categories],
+                #                 label, self.need_label[axis].refinement], level=0)
+                self.need_label[axis].add_category(core.Category(label, parent=self.need_label[axis].tag))
+                # Config().print([self.need_label[axis].child.terminals[0].text, [c.tag for c in self.need_label[axis].categories],
+                #                 label, self.need_label[axis].refinement], level=0)
+            # Config().print([self.need_label[axis].child.terminals[0].text, label], level=0)
         else:
             self.need_label[axis].label = label
             self.need_label[axis].labeled = True

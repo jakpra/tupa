@@ -32,6 +32,7 @@ FEATURE_TEMPLATES = (
     "s1Rwmen#^$"
     "b0Lwmen#^$"
     "b0Rwmen#^$"
+    "g0wmtudNT" "o0wmtudNT" "z0wmtudNT"  # gov, obj, p
     "s0b0e" "b0s0e"  # specific edges
     "a0efAa1efA",  # past actions
 )
@@ -44,8 +45,8 @@ class DenseFeatureExtractor(FeatureExtractor):
     """
     Extracts features from the parser state for classification. To be used with a NeuralNetwork classifier.
     """
-    def __init__(self, params, indexed, hierarchical=False, node_dropout=0, init_params=True, omit_features=None):
-        super().__init__(feature_templates=FEATURE_TEMPLATES, omit_features=omit_features)
+    def __init__(self, params, indexed, hierarchical=False, node_dropout=0, init_params=True, omit_features=None, feature_templates=None):
+        super().__init__(feature_templates=feature_templates or FEATURE_TEMPLATES, omit_features=omit_features)
         self.indexed = indexed
         self.hierarchical = hierarchical
         self.node_dropout = node_dropout
@@ -60,7 +61,10 @@ class DenseFeatureExtractor(FeatureExtractor):
                 param.node_dropout = self.node_dropout
         else:
             self.params = params
-    
+
+    def set_feature_templates(self, feature_templates, omit_features=None):
+        super().set_feature_templates(feature_templates or FEATURE_TEMPLATES, omit_features=omit_features)
+
     def init_param(self, key):
         param = self.params[key]
         self.update_param_indexed(param)

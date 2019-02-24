@@ -84,7 +84,7 @@ class PassageParser(AbstractParser):
         self.config.set_format(self.in_format)
         WIKIFIER.enabled = self.config.args.wikification
         self.state = State(self.passage)
-        self.refined_categories = self.config.refinement(self.config.args.refinement_mapping).keys() # self.passage.categories # self.passage.refined_categories
+        self.refined_categories = self.passage.refined_categories
         # Passage is considered labeled if there are any edges or node labels in it
         edges, node_labels = map(any, zip(*[(n.outgoing, n.attrib.get(LABEL_ATTRIB))
                                             for n in self.passage.layer(layer1.LAYER_ID).all]))
@@ -139,8 +139,8 @@ class PassageParser(AbstractParser):
             self.config.print(lambda: "\n".join(["  predicted: %-15s true: %-15s taken: %-15s %s" % (
                 predicted_action, "|".join(map(str, true_actions.values())), action, self.state) if self.oracle else
                                           "  action: %-15s %s" % (action, self.state)]  +
-                (["  predicted %s label: %-9s true label: %s" % (predicted_label[axis], true_label[axis]) if self.oracle and not
-                 self.config.args.use_gold_node_labels else "  label: %s" % label[axis]] for axis in need_label) +
+                [["  predicted %s label: %-9s true label: %s" % (predicted_label[axis], true_label[axis]) if self.oracle and not
+                 self.config.args.use_gold_node_labels else "  label: %s" % label[axis]] for axis in need_label] +
                 ["    " + l for l in self.state.log]))
             if self.state.finished:
                 return  # action is Finish (or early update is triggered)
@@ -157,7 +157,7 @@ class PassageParser(AbstractParser):
 
     def get_true_label(self, axis, need_label):
         try:
-            return self.oracle.get_label(self.state, axis, axis in self.refined_categories, need_label) if self.oracle else (None, None)
+            return self.oracle.get_label(self.state, axis, axis in self.refined_categories or axis==REFINEMENT_LABEL_KEY, need_label) if self.oracle else (None, None)
         except AssertionError as e:
             if self.training:
                 raise ParserException("Error in getting label from oracle during training") from e
@@ -169,7 +169,9 @@ class PassageParser(AbstractParser):
             need_label = self.state.need_label[axis]  # Label action that requires a choice of node label
         if need_label:
             true_label, raw_true_label = self.get_true_label(axis, action or need_label)
-            label, predicted_label = self.choose(true_label, axis, "node label")
+            label, predicted_label = self.choose(true_label, axis, "refinement label" if axis == REFINEMENT_LABEL_KEY else "node label")
+            # if axis == REFINEMENT_LABEL_KEY:
+            #     self.config.print([true_label, raw_true_label, label, predicted_label], level=0)
             self.state.label_axis(axis, raw_true_label if label == true_label else label)
         return need_label, label, predicted_label, true_label
 
@@ -177,11 +179,11 @@ class PassageParser(AbstractParser):
         if axis is None:
             axis = self.model.axis
         elif (axis == NODE_LABEL_KEY and self.config.args.use_gold_node_labels) or \
-                (axis in self.refined_categories and self.config.args.use_gold_refinement_labels):
+                ((axis in self.refined_categories or axis==REFINEMENT_LABEL_KEY) and self.config.args.use_gold_refinement_labels):
             return true, true
         labels_axis = axis if axis not in self.refined_categories else REFINEMENT_LABEL_KEY
-        labels = self.model.classifier.labels[labels_axis]
-        if axis == NODE_LABEL_KEY or axis in self.refined_categories:
+        labels = self.model.classifier.labels[labels_axis] # = []
+        if axis == NODE_LABEL_KEY or axis in self.refined_categories or axis == REFINEMENT_LABEL_KEY:
             true_keys = (labels[true],) if self.oracle else ()  # Must be before score()
             is_valid = self.state.is_valid_label
         else:
@@ -202,7 +204,7 @@ class PassageParser(AbstractParser):
                 assert not self.model.is_finalized, "Updating finalized model"
                 self.model.classifier.update(
                     features, axis=axis, true=true_keys,
-                    pred=labels[pred] if (axis == NODE_LABEL_KEY or axis in self.refined_categories) else pred.id,
+                    pred=labels[pred] if (axis == NODE_LABEL_KEY or axis in self.refined_categories or axis == REFINEMENT_LABEL_KEY) else pred.id,
                     importance=[self.config.args.swap_importance if a.is_swap else 1 for a in true_values] or None)
             if not is_correct and self.config.args.early_update:
                 self.state.finished = True
@@ -214,7 +216,7 @@ class PassageParser(AbstractParser):
 
     def correct(self, axis, label, pred, scores, true, true_keys):
         true_values = is_correct = ()
-        if axis == NODE_LABEL_KEY or axis in self.refined_categories:
+        if axis == NODE_LABEL_KEY or axis in self.refined_categories or axis == REFINEMENT_LABEL_KEY:
             if self.oracle:
                 is_correct = (label == true)
                 if is_correct:

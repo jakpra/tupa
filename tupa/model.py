@@ -7,6 +7,7 @@ from .action import Actions
 from .classifiers.classifier import Classifier
 from .config import Config, SEPARATOR, SPARSE, MLP, BIRNN, HIGHWAY_RNN, HIERARCHICAL_RNN, NOOP
 from .features.feature_params import FeatureParameters
+from .features.dense_features import DenseFeatureExtractor
 from .model_util import UnknownDict, AutoIncrementDict, remove_backup, save_json, load_json
 
 
@@ -132,8 +133,8 @@ class Model:
     def label_param_def(self, axis, args=None):
         if axis == NODE_LABEL_KEY:
             return self.param_defs(args, only_node_labels=True)[0]
-        elif axis == REFINEMENT_LABEL_KEY:
-            return self.param_defs(args, only_refinement_labels=True)[0]
+        elif axis in self.refined_categories or axis == REFINEMENT_LABEL_KEY:
+            return self.param_defs(args, only_refinement_labels=False)[0]
 
     def param_defs(self, args=None, only_node_labels=False, only_refinement_labels=False):
         if only_node_labels:
@@ -143,7 +144,7 @@ class Model:
         return [ParameterDefinition(args or self.config.args, n, *k) for n, *k in
                 NODE_LABEL_PARAM_DEFS + REFINEMENT_LABEL_PARAM_DEFS + PARAM_DEFS]
 
-    def init_model(self, axis=None, lang=None, init_params=True, refined_categories=[]):
+    def init_model(self, axis=None, lang=None, init_params=True, refined_categories=[], feature_templates=None):
         self.set_axis(axis, lang)
         if not self.refined_categories:
             self.set_refined_categories(refined_categories)
@@ -168,6 +169,9 @@ class Model:
             if self.config.args.refinement_labels and not self.config.args.use_gold_refinement_labels and \
                     REFINEMENT_LABEL_KEY not in labels:
                 labels[REFINEMENT_LABEL_KEY] = self.init_labels(REFINEMENT_LABEL_KEY)  # Updates self.feature_params
+                # for axis in self.refined_categories:
+                #     if axis not in labels:
+                #         labels[axis] = OrderedDict()
 
         if self.classifier:  # Already initialized
             pass
@@ -182,13 +186,13 @@ class Model:
             self.feature_extractor = EmptyFeatureExtractor()
             self.classifier = NoOp(self.config, labels)
         elif self.is_neural_network:
-            from .features.dense_features import DenseFeatureExtractor
             from .classifiers.nn.neural_network import NeuralNetwork
             self.feature_extractor = DenseFeatureExtractor(self.feature_params,
                                                            indexed=self.config.args.classifier != MLP,
                                                            hierarchical=self.config.args.classifier == HIERARCHICAL_RNN,
                                                            node_dropout=self.config.args.node_dropout,
-                                                           omit_features=self.config.args.omit_features)
+                                                           omit_features=self.config.args.omit_features,
+                                                           feature_templates=feature_templates)
             self.classifier = NeuralNetwork(self.config, labels)
         else:
             raise ValueError("Invalid model type: '%s'" % self.config.args.classifier)
@@ -247,8 +251,10 @@ class Model:
         return labels.data
 
     def score(self, state, axis):
+        # self.feature_extractor.set_feature_templates(("g0wmtudNT" "o0wmtudNT" "p0wmtudNT",) if
+        #                                                  axis == REFINEMENT_LABEL_KEY else None)   # governor, object and prep token features, following Schneider et al. (2018)
         features = self.feature_extractor.extract_features(state)
-        return self.classifier.score(features, is_refinement=axis in self.refined_categories, axis=axis), features  # scores is a NumPy array
+        return self.classifier.score(features, is_refinement=axis in self.refined_categories or axis == REFINEMENT_LABEL_KEY, axis=axis), features  # scores is a NumPy array
         # return self.classifier.score(features, is_refinement=axis != 'ucca',
         #                              axis=axis), features  # scores is a NumPy array
 
@@ -258,8 +264,9 @@ class Model:
         if self.config.args.node_labels and not self.config.args.use_gold_node_labels:
             axes.append(NODE_LABEL_KEY)
         if self.config.args.refinement_labels and not self.config.args.use_gold_refinement_labels:
-            for axis in self.refined_categories:
-                axes.append(axis)
+            axes.append(REFINEMENT_LABEL_KEY)
+            # for axis in self.refined_categories:
+            #     axes.append(axis)
         self.classifier.init_features(self.feature_extractor.init_features(state), axes, train)
 
     def finalize(self, finished_epoch):
