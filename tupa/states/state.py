@@ -259,7 +259,7 @@ class State:
             if child is None:
                 child = action.node = self.add_node(orig_node=action.orig_node, implicit=True)
             action.edge = self.add_edge(Edge(parent, child, tag, action.orig_edge, remote=action.remote))
-            if self.args.refinement_labels and tag in self.passage.refined_categories \
+            if self.args.refinement_labels and tag in Config().refinement(Config().args.refinement_mapping) \
                     and (not child.text or child.get_terminal(self.passage.layer(layer0.LAYER_ID)).extra.get('ss', '').startswith('p.')
                     and not action.edge.refinement): # pre-identified terminals only
                 self.need_label[REFINEMENT_LABEL_KEY] = action.edge

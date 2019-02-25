@@ -13,7 +13,7 @@ from semstr.util.amr import LABEL_ATTRIB, WIKIFIER
 from semstr.validation import validate
 from tqdm import tqdm
 from ucca import diffutil, ioutil, textutil, layer0, layer1
-from ucca.evaluation import LABELED, UNLABELED, EVAL_TYPES, evaluate as evaluate_ucca
+from ucca.evaluation import LABELED, UNLABELED, REFINEMENT, EVAL_TYPES, evaluate as evaluate_ucca
 from ucca.normalization import normalize
 
 from tupa.__version__ import GIT_VERSION
@@ -78,13 +78,13 @@ class PassageParser(AbstractParser):
         self.ignore_node = None if self.config.args.linkage else lambda n: n.tag == layer1.NodeTags.Linkage
         self.state_hash_history = set()
         self.state = self.oracle = self.eval_type = None
-        self.refined_categories = []
+        self.refined_categories = self.config.refinement(self.config.args.refinement_mapping)
 
     def init(self):
         self.config.set_format(self.in_format)
         WIKIFIER.enabled = self.config.args.wikification
         self.state = State(self.passage)
-        self.refined_categories = self.passage.refined_categories
+        # self.refined_categories = self.config.refinement(self.config.args.refinement_mapping)  #self.passage.refined_categories
         # Passage is considered labeled if there are any edges or node labels in it
         edges, node_labels = map(any, zip(*[(n.outgoing, n.attrib.get(LABEL_ATTRIB))
                                             for n in self.passage.layer(layer1.LAYER_ID).all]))
@@ -293,7 +293,8 @@ class PassageParser(AbstractParser):
         score = evaluator(self.out, self.passage, converter=get_output_converter(self.format),
                           verbose=self.out and self.config.args.verbose > 3,
                           constructions=self.config.args.constructions,
-                          eval_types=(self.eval_type,) if mode is ParseMode.dev else (LABELED, UNLABELED))
+                          eval_types=((self.eval_type,) if mode is ParseMode.dev else (LABELED, UNLABELED)) \
+                                     + ((REFINEMENT,) if self.refined_categories else ()))
         self.f1 = average_f1(score, self.eval_type)
         score.lang = self.lang
         return score
@@ -625,7 +626,8 @@ def average_f1(scores, eval_type=None):
     for e in (eval_type or get_eval_type(scores),) + EVAL_TYPES:
         try:
             return scores.average_f1(e)
-        except ValueError:
+        except ValueError as ex:
+            Config().print([e, str(ex)], level=0)
             pass
     return 0
 
