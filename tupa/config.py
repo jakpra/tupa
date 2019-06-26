@@ -495,7 +495,7 @@ class Config(object, metaclass=Singleton):
 
     def refinement(self, filename):
         if not filename:
-            return None
+            return {}
         if not self._refinement_map:
             self._refinement_map = load_json(filename)
         return self._refinement_map

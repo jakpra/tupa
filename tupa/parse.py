@@ -13,7 +13,7 @@ from semstr.util.amr import LABEL_ATTRIB, WIKIFIER
 from semstr.validation import validate
 from tqdm import tqdm
 from ucca import diffutil, ioutil, textutil, layer0, layer1
-from ucca.evaluation import LABELED, UNLABELED, REFINEMENT, EVAL_TYPES, evaluate as evaluate_ucca
+from ucca.evaluation import LABELED, UNLABELED, REFINEMENT, EVAL_TYPES, evaluate as evaluate_ucca, Scores as scores_ucca, EvaluatorResults, SummaryStatistics
 from ucca.normalization import normalize
 
 from tupa.__version__ import GIT_VERSION
@@ -78,7 +78,7 @@ class PassageParser(AbstractParser):
         self.ignore_node = None if self.config.args.linkage else lambda n: n.tag == layer1.NodeTags.Linkage
         self.state_hash_history = set()
         self.state = self.oracle = self.eval_type = None
-        self.refined_categories = self.config.refinement(self.config.args.refinement_mapping)
+        self.refined_categories = self.config.refinement(self.config.args.refinement_mapping) or []
 
     def init(self):
         self.config.set_format(self.in_format)
@@ -217,13 +217,16 @@ class PassageParser(AbstractParser):
     def correct(self, axis, label, pred, scores, true, true_keys):
         true_values = is_correct = ()
         if axis == NODE_LABEL_KEY or axis in self.refined_categories or axis == REFINEMENT_LABEL_KEY:
-            if self.oracle:
-                is_correct = (label == true)
-                if is_correct:
-                    self.correct_label_count += 1
-                elif self.training:
-                    label = true
-            self.label_count += 1
+             if true is not None or label is not None: # ignore true negatives
+                 if self.oracle:
+                     is_correct = (label == true)
+                     if is_correct:
+                         self.correct_label_count += 1
+                     elif self.training:
+                         label = true
+                 self.label_count += 1
+             elif self.oracle and self.training:
+                 label = true
         else:  # action
             true_keys, true_values = map(list, zip(*true.items())) if true else (None, None)
             label = true.get(pred.id)
@@ -501,6 +504,30 @@ class Parser(AbstractParser):
         self.config.save(model.filename)
         model.save(save_init=self.save_init)
 
+    def eval_snacs(self, passages):
+        mutual = 0
+        only_pred = 0
+        only_gold = 0
+
+        for passage in passages:
+
+            for pos, term in passage.layer(layer0.LAYER_ID).pairs:
+                pred = term.incoming[0].refinement if term.incoming else None
+                if 'ss' in term.extra and term.extra['ss'].startswith('p.'):
+                    gold = term.extra['ss']
+                    if pred == gold:
+                        mutual += 1
+                    else:
+                        only_gold += 1
+                        only_pred += 1 if pred is not None else 0
+                elif pred is not None:
+                    only_pred += 1
+
+        return scores_ucca(((REFINEMENT, EvaluatorResults.aggregate([SummaryStatistics(mutual, only_pred, only_gold)])),),
+                      name='SNACS',
+                      evaluation_format='snacs')
+
+
     def eval(self, passages, mode, scores_filename, display=True):
         print("Evaluating on %s passages" % mode.name)
         passage_scores = [s for _, s in self.parse(passages, mode=mode, evaluate=True, display=display)]
@@ -512,6 +539,7 @@ class Parser(AbstractParser):
             print("Evaluation %s, average %s F1 score on %s: %.3f%s" % (prefix, get_eval_type(scores), mode.name,
                                                                         average_score, scores.details(average_f1)))
         print_scores(scores, scores_filename, prefix=prefix, prefix_title="iteration")
+        print_scores(scores, '.'.join(scores_filename.split('.')[:-1] + ['snacs', 'csv']), prefix=prefix, prefix_title="iteration", eval_type=REFINEMENT)
         return average_score, scores
 
     def parse(self, passages, mode=ParseMode.test, evaluate=False, display=True, write=False):
@@ -589,17 +617,17 @@ def percents_str(part, total, infix="", fraction=True):
     return ret
 
 
-def print_scores(scores, filename, prefix=None, prefix_title=None):
+def print_scores(scores, filename, prefix=None, prefix_title=None, eval_type=LABELED):
     if filename:
         print_title = not os.path.exists(filename)
         try:
             with open(filename, "a") as f:
                 if print_title:
-                    titles = scores.titles()
+                    titles = scores.titles(eval_type=eval_type)
                     if prefix_title is not None:
                         titles = [prefix_title] + titles
                     print(",".join(titles), file=f)
-                fields = scores.fields()
+                fields = scores.fields(eval_type=eval_type)
                 if prefix is not None:
                     fields.insert(0, prefix)
                 print(",".join(fields), file=f)
