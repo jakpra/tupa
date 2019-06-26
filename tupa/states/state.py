@@ -327,7 +327,9 @@ class State:
         self.heads.discard(edge.child)
         self.log.append("edge: %s" % edge)
 
-        # self.integrate_refinement()
+        if any(t.orig_node.extra.get('ss', '').startswith('p.') for n in self.nodes for t in (n.terminals or [])):
+            self.integrate_refinement()
+#            Config().print(self, level=0)
 
         return edge
 

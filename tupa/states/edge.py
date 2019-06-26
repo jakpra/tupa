@@ -12,7 +12,7 @@ class Edge:
         # List of categories
         self.categories = [c for c in orig_edge.categories if c.parent not in orig_edge.tags] if orig_edge else []
         # refinement_l = [c for c in self.categories if c.parent == self.tag] if self.categories else []
-        # self.refinement = None # refinement_l[0].tag if len(refinement_l) > 0 else None
+        self._refinement = None # refinement_l[0].tag if len(refinement_l) > 0 else None
         self.remote = remote  # True or False
 
     def add(self):
@@ -27,14 +27,18 @@ class Edge:
     def add_category(self, cat):
         if not any(c.tag == cat.tag for c in self.categories):
             self.categories.append(cat)
-            # refinement_l = [c for c in self.categories if c.parent == self.tag] if self.categories else []
-            # self.refinement = refinement_l[0].tag if len(refinement_l) > 0 else None
+            refinement_l = [c for c in self.categories if c.parent == self.tag] if self.categories else []
+            self._refinement = refinement_l[0].tag if len(refinement_l) > 0 else None
 
     @property
     def refinement(self):
         for c in self.categories:
             if c.parent == self.tag:
                 return c.tag
+
+    @refinement.setter
+    def refinement(self, tag):
+        self._refinement = tag
 
     def remove_category(self, cat):
         self.categories = [c for c in self.categories if c.tag != cat.tag]

@@ -7,7 +7,7 @@ from tupa.config import Config, FEATURE_PROPERTIES
 
 FEATURE_ELEMENT_PATTERN = re.compile(r"([sbgoza])(\d)([lrLR]*)([%s]*)" % FEATURE_PROPERTIES)
 FEATURE_TEMPLATE_PATTERN = re.compile(r"^(%s)+$" % FEATURE_ELEMENT_PATTERN.pattern)
-NON_NUMERIC = "wmtudencpAT#^$"
+NON_NUMERIC = "wmtudencpAT#^$f"
 
 REFINEMENT_LABEL_KEY = "r"
 
@@ -344,7 +344,7 @@ NODE_PROP_GETTERS = {
     "i": lambda node, *_: head_terminal(node).index - 1,
     "j": lambda node, *_: node.index,
     "e": lambda node, prev, binary: next(e.tag for e in node.incoming if not binary or e.parent == prev),
-    # "f": lambda node, prev, binary: node.incoming[0].refinement if len(node.incoming) == 1 else node._fedge().refinement,
+    "f": lambda node, prev, binary: node.incoming[0].refinement if len(node.incoming) == 1 else node._fedge().refinement,
     # "F": lambda node, *_: head_terminal(node).extra.get('ss2'),
     "n": lambda node, *_: node.label,
     "c": lambda node, *_: node.category,

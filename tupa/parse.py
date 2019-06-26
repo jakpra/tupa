@@ -78,7 +78,7 @@ class PassageParser(AbstractParser):
         self.ignore_node = None if self.config.args.linkage else lambda n: n.tag == layer1.NodeTags.Linkage
         self.state_hash_history = set()
         self.state = self.oracle = self.eval_type = None
-        self.refined_categories = self.config.refinement(self.config.args.refinement_mapping)
+        self.refined_categories = [] #self.config.refinement(self.config.args.refinement_mapping)
 
     def init(self):
         self.config.set_format(self.in_format)
