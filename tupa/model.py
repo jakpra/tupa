@@ -94,10 +94,10 @@ NODE_LABEL_PARAM_DEFS = [
     (NODE_LABEL_KEY, dict(dim="node_label_dim",    size="max_node_labels",    dropout="node_label_dropout",
                           min_count="min_node_label_count"))
 ]
-REFINEMENT_LABEL_PARAM_DEFS = [
-    (REFINEMENT_LABEL_KEY, dict(dim="refinement_label_dim",    size="max_refinement_labels",    dropout="refinement_label_dropout",
-                          min_count="min_refinement_label_count"))
-]
+#REFINEMENT_LABEL_PARAM_DEFS = [
+#    (REFINEMENT_LABEL_KEY, dict(dim="refinement_label_dim",    size="max_refinement_labels",    dropout="refinement_label_dropout",
+#                          min_count="min_refinement_label_count"))
+#]
 PARAM_DEFS = [
     ("c",            dict(dim="node_category_dim", size="max_node_categories")),
     ("W",            dict(dim="word_dim_external", size="max_words_external", dropout="word_dropout_external",
@@ -135,16 +135,17 @@ class Model:
     def label_param_def(self, axis, args=None):
         if axis == NODE_LABEL_KEY:
             return self.param_defs(args, only_node_labels=True)[0]
-        elif axis == REFINEMENT_LABEL_KEY:
-            return self.param_defs(args, only_refinement_labels=True)[0]
+        #elif axis == REFINEMENT_LABEL_KEY:
+        #    return self.param_defs(args, only_refinement_labels=True)[0]
 
     def param_defs(self, args=None, only_node_labels=False, only_refinement_labels=False):
         if only_node_labels:
             return [ParameterDefinition(args or self.config.args, n, *k) for n, *k in NODE_LABEL_PARAM_DEFS]
-        if only_refinement_labels:
-            return [ParameterDefinition(args or self.config.args, n, *k) for n, *k in REFINEMENT_LABEL_PARAM_DEFS]
+        #if only_refinement_labels:
+        #    return [ParameterDefinition(args or self.config.args, n, *k) for n, *k in REFINEMENT_LABEL_PARAM_DEFS]
         return [ParameterDefinition(args or self.config.args, n, *k) for n, *k in
-                NODE_LABEL_PARAM_DEFS + REFINEMENT_LABEL_PARAM_DEFS + PARAM_DEFS]
+                 NODE_LABEL_PARAM_DEFS + PARAM_DEFS]
+        #        NODE_LABEL_PARAM_DEFS + REFINEMENT_LABEL_PARAM_DEFS + PARAM_DEFS]
 
     def init_model(self, axis=None, lang=None, init_params=True, refined_categories=[]):
         self.set_axis(axis, lang)
@@ -168,9 +169,9 @@ class Model:
             if self.config.args.node_labels and not self.config.args.use_gold_node_labels and \
                     NODE_LABEL_KEY not in labels:
                 labels[NODE_LABEL_KEY] = self.init_labels(NODE_LABEL_KEY)  # Updates self.feature_params
-            if self.config.args.refinement_labels and not self.config.args.use_gold_refinement_labels and \
-                    REFINEMENT_LABEL_KEY not in labels:
-                labels[REFINEMENT_LABEL_KEY] = self.init_labels(REFINEMENT_LABEL_KEY)  # Updates self.feature_params
+            #if self.config.args.refinement_labels and not self.config.args.use_gold_refinement_labels and \
+            #        REFINEMENT_LABEL_KEY not in labels:
+            #    labels[REFINEMENT_LABEL_KEY] = self.init_labels(REFINEMENT_LABEL_KEY)  # Updates self.feature_params
 
         if self.classifier:  # Already initialized
             pass
@@ -258,9 +259,9 @@ class Model:
         axes = [self.axis]
         if self.config.args.node_labels and not self.config.args.use_gold_node_labels:
             axes.append(NODE_LABEL_KEY)
-        if self.config.args.refinement_labels and not self.config.args.use_gold_refinement_labels:
-            for axis in self.refined_categories:
-                axes.append(axis)
+        #if self.config.args.refinement_labels and not self.config.args.use_gold_refinement_labels:
+        #    for axis in self.refined_categories:
+        #        axes.append(axis)
         self.classifier.init_features(self.feature_extractor.init_features(state), axes, train)
 
     def finalize(self, finished_epoch):

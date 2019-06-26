@@ -7,7 +7,7 @@ from tupa.config import Config, FEATURE_PROPERTIES
 
 FEATURE_ELEMENT_PATTERN = re.compile(r"([sba])(\d)([lrLR]*)([%s]*)" % FEATURE_PROPERTIES)
 FEATURE_TEMPLATE_PATTERN = re.compile(r"^(%s)+$" % FEATURE_ELEMENT_PATTERN.pattern)
-NON_NUMERIC = "wmtudefFSncpAT#^$"
+NON_NUMERIC = "wmtudefFSncpAT#^$BDFG"
 
 
 class FeatureTemplate:
@@ -312,8 +312,8 @@ NODE_PROP_GETTERS = {
     "j": lambda node, *_: node.index,
     "e": lambda node, prev, binary: next(e.tag for e in node.incoming if not binary or e.parent == prev),
     "f": lambda node, prev, binary: next(e.refinement for e in node.incoming if not binary or e.parent == prev),  #node.incoming[0].refinement if len(node.incoming) == 1 else node._fedge().refinement,
-    "S": lambda node, *_: head_terminal(node).extra.get('ss'),
-    "F": lambda node, *_: head_terminal(node).extra.get('ss2'),
+    "S": lambda node, *_: head_terminal(node).orig_node.extra.get('ss'),
+    "F": lambda node, *_: head_terminal(node).orig_node.extra.get('ss2'),
     "n": lambda node, *_: node.label,
     "c": lambda node, *_: node.category,
     "x": lambda node, prev, binary: int(prev in node.parents) if binary else gap_type(node),
@@ -328,6 +328,10 @@ NODE_PROP_GETTERS = {
     "#": lambda node, *_: head_terminal(node).tok[Attr.SHAPE.value],
     "^": lambda node, *_: head_terminal(node).tok[Attr.PREFIX.value],
     "$": lambda node, *_: head_terminal(node).tok[Attr.SUFFIX.value],
+    "B": lambda node, *_: head_terminal(node).orig_node.extra.get('identified_for_pss'),
+    "D": lambda node, *_: head_terminal(node).orig_node.extra.get('is_part_of_mwe'),
+    "F": lambda node, *_: head_terminal(node).orig_node.extra.get('lexcat'),
+    "G": lambda node, *_: head_terminal(node).orig_node.extra.get('lexlemma')
 }
 
 

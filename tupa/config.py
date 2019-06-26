@@ -23,18 +23,18 @@ NOOP = "noop"
 NN_CLASSIFIERS = (MLP, BIRNN, HIGHWAY_RNN, HIERARCHICAL_RNN)
 CLASSIFIERS = (SPARSE, MLP, BIRNN, HIGHWAY_RNN, HIERARCHICAL_RNN, NOOP)
 
-FEATURE_PROPERTIES = "wmtudhefFSncpqxyAPCIEMNT#^$"
+FEATURE_PROPERTIES = "wmtudhefFSncpqxyAPCIEMNT#^$BDFG"
 
 # Swap types
 REGULAR = "regular"
 COMPOUND = "compound"
 
 # Input/output formats
-FORMATS = ["ucca"] + list(CONVERTERS)
+FORMATS = ["ucca", "snacs", "find_refined"] + list(CONVERTERS)
 FILE_FORMATS = [e.lstrip(".") for e in UCCA_EXT] + FORMATS
 
 # Required number of edge labels per format
-EDGE_LABELS_NUM = {"amr": 110, "sdp": 70, "conllu": 60}
+EDGE_LABELS_NUM = {"amr": 110, "sdp": 70, "conllu": 60, "snacs": 60, "find_refined": 10}
 SPARSE_ARG_NAMES = set()
 NN_ARG_NAMES = set()
 DYNET_ARG_NAMES = set()
